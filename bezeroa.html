@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zereginen APIa - Cliente</title>
+<style>
+  :root {
+    --bg: #ffffff; --bg-subtle: #f6f8fa; --border: #d0d7de; --text: #1f2328; --muted: #656d76;
+    --accent: #0969da; --success: #1a7f37; --success-bg: #dafbe1; --danger: #cf222e; --danger-bg: #ffebe9;
+    --btn-primary: #1f883d; --btn-primary-hover: #1a7f37; --warn: #9a6700; --warn-bg: #fff8c5;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --bg-subtle: #161b22; --border: #30363d; --text: #e6edf3; --muted: #8d96a0;
+      --accent: #4493f8; --success: #3fb950; --success-bg: #12261e; --danger: #f85149; --danger-bg: #2d1214;
+      --btn-primary: #238636; --btn-primary-hover: #2ea043; --warn: #d29922; --warn-bg: #272115;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  }
+  .topbar { background: linear-gradient(135deg, #0b3d91, #5b3fd1); color: #fff; padding: 18px 24px; box-shadow: 0 2px 8px #0003; }
+  .topbar-in { max-width: 960px; margin: 0 auto; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .topbar h1 { font-size: 20px; font-weight: 600; margin: 0; }
+  .topbar h1 span { color: #ffffffb3; font-weight: 400; }
+  .spacer { flex: 1; }
+  .conn { display: flex; align-items: center; gap: 8px; }
+  .conn label { color: #ffffffb3; font-size: 12px; }
+  .conn input { border-color: #ffffff55; background: #ffffff1f; color: #fff; }
+  .conn input:focus { outline-color: #fff; border-color: #fff; }
+
+  .status { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 2em;
+    background: #00000033; font-size: 12px; font-weight: 500; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #9aa0a6; transition: background .3s, box-shadow .3s; }
+  .status.ok .dot { background: #2ecc71; box-shadow: 0 0 0 3px #2ecc7144, 0 0 10px #2ecc71; }
+  .status.ko .dot { background: #ff4d4f; box-shadow: 0 0 0 3px #ff4d4f44, 0 0 10px #ff4d4f; }
+
+  main { max-width: 960px; margin: 24px auto; padding: 0 24px; }
+  .box { border: 1px solid var(--border); border-top: 3px solid var(--acc); border-radius: 10px; margin-bottom: 24px;
+    background: var(--bg); box-shadow: 0 1px 3px #0000001a, 0 6px 16px #0000000d; }
+  .box:nth-of-type(1) { --acc: #0969da; }
+  .box:nth-of-type(2) { --acc: #8250df; }
+  .box:nth-of-type(3) { --acc: #1a7f37; }
+  .box-header { background: var(--bg-subtle); border-bottom: 1px solid var(--border); padding: 12px 16px;
+    border-radius: 8px 8px 0 0; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .box-header .sub { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .box-body { padding: 16px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .row:last-child { margin-bottom: 0; }
+
+  input[type=text], input[type=number] {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 12px; font-size: 14px; line-height: 20px; height: 32px;
+  }
+  input[type=number] { width: 96px; }
+  input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field span { font-size: 12px; color: var(--muted); }
+  .check { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
+
+  .btn {
+    display: inline-flex; align-items: center; height: 32px; padding: 0 16px; border-radius: 8px; font-size: 14px;
+    font-weight: 500; cursor: pointer; background: var(--bg-subtle); color: var(--text); border: 1px solid var(--border);
+  }
+  .btn:hover { background: var(--border); }
+  .btn.primary { background: var(--btn-primary); border-color: #0000001a; color: #fff; }
+  .btn.primary:hover { background: var(--btn-primary-hover); }
+  .btn.danger { color: var(--danger); }
+  .btn.danger:hover { background: var(--danger); color: #fff; }
+  .btn.sm { height: 24px; padding: 0 10px; font-size: 12px; }
+  .method { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-right: 8px; }
+
+  .out { margin-top: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-subtle); }
+  .out-head { padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted);
+    display: flex; justify-content: space-between; gap: 12px; }
+  .out pre { margin: 0; padding: 12px; font-family: var(--mono); font-size: 12px; overflow-x: auto; min-height: 44px; white-space: pre-wrap; }
+  .out.error { border-color: var(--danger); }
+  .out.error .out-head { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+
+  .label { display: inline-block; padding: 0 8px; border: 1px solid transparent; border-radius: 2em; font-size: 12px;
+    font-weight: 500; line-height: 18px; }
+  .label.open { color: var(--warn); background: var(--warn-bg); border-color: var(--warn); }
+  .label.done { color: var(--success); background: var(--success-bg); border-color: var(--success); }
+  .label.pred { color: var(--accent); border-color: var(--accent); font-size: 14px; padding: 2px 12px; }
+
+  .progress { height: 8px; border-radius: 6px; background: var(--border); overflow: hidden; margin-top: 12px; display: none; }
+  .progress div { height: 100%; width: 0; background: var(--success); transition: width .4s; }
+  .score-text { font-size: 12px; color: var(--muted); margin-top: 6px; display: none; }
+  .result-line { margin-top: 12px; display: none; align-items: center; gap: 8px; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  .issues { list-style: none; margin: 12px 0 0; padding: 0; border: 1px solid var(--border); border-radius: 6px; }
+  .issues:empty { display: none; }
+  .issues li { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+  .issues li:last-child { border-bottom: none; }
+  .issues li:hover { background: var(--bg-subtle); }
+  .issues .title { flex: 1; font-weight: 600; }
+  .issues .title small { color: var(--muted); font-weight: 400; margin-right: 8px; font-family: var(--mono); }
+  .issues li.closed .title span { color: var(--muted); text-decoration: line-through; }
+  .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .counter { font-size: 12px; color: var(--muted); margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <h1>Zereginen APIa <span>/ cliente</span></h1>
+    <div class="spacer"></div>
+    <div class="status" id="status" title="Estado de la conexión con la API">
+      <span class="dot"></span><span id="statusTxt">Comprobando...</span>
+    </div>
+    <div class="conn">
+      <label for="baseUrl">Base URL</label>
+      <input type="text" id="baseUrl" value="http://127.0.0.1:8000" size="26" oninput="urlAldatu()">
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <div class="box">
+    <div class="box-header">Endpoints básicos <span class="sub">GET</span></div>
+    <div class="box-body">
+      <div class="row">
+        <button class="btn" onclick="erakutsi('o1', '/')"><span class="method">GET</span>/</button>
+        <button class="btn" onclick="erakutsi('o1', '/agurra')"><span class="method">GET</span>/agurra</button>
+        <button class="btn" onclick="erakutsi('o1', '/kurtsoa')"><span class="method">GET</span>/kurtsoa</button>
+      </div>
+      <div class="row">
+        <input type="text" id="izena" placeholder="izena">
+        <button class="btn" onclick="agurratu()"><span class="method">GET</span>/agurra/{izena}</button>
+      </div>
+      <div class="out" id="c1"><div class="out-head"><span>Respuesta</span><span id="s1"></span></div><pre id="o1"></pre></div>
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="box-header">Modelo KNN (iris) <span class="sub">scikit-learn</span></div>
+    <div class="box-body">
+      <div class="row">
+        <button class="btn" onclick="score()"><span class="method">GET</span>/score</button>
+      </div>
+      <div class="progress" id="prog"><div id="progBar"></div></div>
+      <div class="score-text" id="scoreTxt"></div>
+      <hr>
+      <div class="row">
+        <div class="field"><span>Largo sépalo</span><input type="number" step="0.1" id="ls" value="5.1"></div>
+        <div class="field"><span>Ancho sépalo</span><input type="number" step="0.1" id="as" value="3.5"></div>
+        <div class="field"><span>Largo pétalo</span><input type="number" step="0.1" id="lp" value="1.4"></div>
+        <div class="field"><span>Ancho pétalo</span><input type="number" step="0.1" id="ap" value="0.2"></div>
+      </div>
+      <div class="row">
+        <button class="btn primary" onclick="predict()">Predecir</button>
+        <button class="btn" onclick="ausazkoa()">Valores aleatorios</button>
+      </div>
+      <div class="result-line" id="pred"><span style="color:var(--muted)">Clase predicha:</span><span class="label pred" id="predLabel"></span></div>
+      <div class="out" id="c2"><div class="out-head"><span>Respuesta</span><span id="s2"></span></div><pre id="o2"></pre></div>
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="box-header">Zereginak <span class="sub">CRUD</span></div>
+    <div class="box-body">
+      <div class="row">
+        <input type="text" id="izenburua" placeholder="Izenburua" size="36" onkeydown="if(event.key==='Enter') sortu()">
+        <label class="check"><input type="checkbox" id="egina"> egina</label>
+        <button class="btn primary" onclick="sortu()">Crear zeregina</button>
+      </div>
+      <hr>
+      <div class="toolbar">
+        <label class="check"><input type="checkbox" id="soilEginak"> Solo completadas</label>
+        <label class="check">Límite <input type="number" id="muga" value="10" min="1" max="100"></label>
+        <button class="btn" onclick="zerrendatu()"><span class="method">GET</span>/zereginak</button>
+        <button class="btn" onclick="erakutsi('o3', '/zereginak/kopurua')"><span class="method">GET</span>/kopurua</button>
+      </div>
+      <ul class="issues" id="zerrenda"></ul>
+      <div class="counter" id="counter"></div>
+      <div class="out" id="c3"><div class="out-head"><span>Respuesta</span><span id="s3"></span></div><pre id="o3"></pre></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const base = () => document.getElementById('baseUrl').value.replace(/\/+$/, '');
+const val = id => document.getElementById(id).value;
+
+// ---------- indicador de conexión ----------
+function egoera(konektatuta) {
+  const el = document.getElementById('status');
+  el.classList.remove('ok', 'ko');
+  el.classList.add(konektatuta ? 'ok' : 'ko');
+  document.getElementById('statusTxt').textContent = konektatuta ? 'Conectado' : 'Sin conexión';
+}
+
+async function konexioaKonprobatu() {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 3000);
+  try {
+    await fetch(base() + '/', { signal: ctl.signal });
+    egoera(true);
+  } catch { egoera(false); }
+  finally { clearTimeout(t); }
+}
+
+let urlTimer;
+function urlAldatu() {
+  document.getElementById('statusTxt').textContent = 'Comprobando...';
+  document.getElementById('status').classList.remove('ok', 'ko');
+  clearTimeout(urlTimer);
+  urlTimer = setTimeout(konexioaKonprobatu, 500);
+}
+
+konexioaKonprobatu();
+setInterval(konexioaKonprobatu, 5000);
+
+async function eskaera(metodoa, bidea, gorputza) {
+  const aukerak = { method: metodoa, headers: {} };
+  if (gorputza !== undefined) {
+    aukerak.headers['Content-Type'] = 'application/json';
+    aukerak.body = JSON.stringify(gorputza);
+  }
+  const hasiera = performance.now();
+  let r;
+  try { r = await fetch(base() + bidea, aukerak); }
+  catch (e) { egoera(false); throw e; }
+  egoera(true);
+  const info = `${metodoa} ${bidea} · ${r.status} · ${Math.round(performance.now() - hasiera)} ms`;
+  if (!r.ok) {
+    let xehetasuna;
+    try { xehetasuna = JSON.stringify((await r.json()).detail); } catch { xehetasuna = r.statusText; }
+    const err = new Error(`${r.status}: ${xehetasuna}`);
+    err.info = info;
+    throw err;
+  }
+  eskaera.azkena = info;
+  return r.status === 204 ? null : r.json();
+}
+
+function idatzi(n, edukia, info, errorea = false) {
+  document.getElementById('o' + n).textContent = typeof edukia === 'string' ? edukia : JSON.stringify(edukia, null, 2);
+  document.getElementById('s' + n).textContent = info || '';
+  document.getElementById('c' + n).classList.toggle('error', errorea);
+}
+
+function huts(n, e) {
+  const mezua = e instanceof TypeError
+    ? 'No se pudo conectar con la API. Comprueba que uvicorn está arrancado y que CORS está activado.'
+    : e.message;
+  idatzi(n, mezua, e.info || 'Error de conexión', true);
+}
+
+async function erakutsi(o, bidea) {
+  const n = o.slice(1);
+  try { const d = await eskaera('GET', bidea); idatzi(n, d, eskaera.azkena); }
+  catch (e) { huts(n, e); }
+}
+
+function agurratu() {
+  const izena = val('izena').trim();
+  erakutsi('o1', izena ? '/agurra/' + encodeURIComponent(izena) : '/agurra');
+}
+
+// ---------- ML ----------
+async function score() {
+  try {
+    const d = await eskaera('GET', '/score');
+    const pct = Math.round(d.scores * 1000) / 10;
+    document.getElementById('prog').style.display = 'block';
+    document.getElementById('progBar').style.width = pct + '%';
+    const t = document.getElementById('scoreTxt');
+    t.style.display = 'block';
+    t.textContent = `Accuracy media (cv=5): ${pct}%`;
+    idatzi(2, d, eskaera.azkena);
+  } catch (e) { huts(2, e); }
+}
+
+async function predict() {
+  const bidea = `/predict/${val('ls')}/${val('as')}/${val('lp')}/${val('ap')}`;
+  try {
+    const d = await eskaera('GET', bidea);
+    idatzi(2, d, eskaera.azkena);
+    const m = String(d.erantzuna).match(/setosa|versicolor|virginica/);
+    document.getElementById('pred').style.display = 'flex';
+    document.getElementById('predLabel').textContent = m ? m[0] : String(d.erantzuna);
+  } catch (e) { huts(2, e); }
+}
+
+function ausazkoa() {
+  const r = (a, b) => (a + Math.random() * (b - a)).toFixed(1);
+  document.getElementById('ls').value = r(4.3, 7.9);
+  document.getElementById('as').value = r(2.0, 4.4);
+  document.getElementById('lp').value = r(1.0, 6.9);
+  document.getElementById('ap').value = r(0.1, 2.5);
+  predict();
+}
+
+// ---------- CRUD ----------
+async function zerrendatu() {
+  const params = new URLSearchParams({ muga: val('muga') });
+  if (document.getElementById('soilEginak').checked) params.set('egina', 'true');
+  try {
+    const zereginak = await eskaera('GET', '/zereginak?' + params);
+    marraztu(zereginak);
+    idatzi(3, zereginak, eskaera.azkena);
+  } catch (e) { huts(3, e); }
+}
+
+function marraztu(zereginak) {
+  const ul = document.getElementById('zerrenda');
+  ul.innerHTML = '';
+  for (const z of zereginak) {
+    const li = document.createElement('li');
+    if (z.egina) li.className = 'closed';
+
+    const lab = document.createElement('span');
+    lab.className = 'label ' + (z.egina ? 'done' : 'open');
+    lab.textContent = z.egina ? 'Completada' : 'Pendiente';
+
+    const title = document.createElement('span');
+    title.className = 'title';
+    const id = document.createElement('small');
+    id.textContent = '#' + z.id;
+    const txt = document.createElement('span');
+    txt.textContent = z.izenburua;
+    title.append(id, txt);
+
+    li.append(lab, title,
+      botoia(z.egina ? 'Reabrir' : 'Completar', () => aldatu(z)),
+      botoia('Eliminar', () => ezabatu(z.id), 'danger'));
+    ul.appendChild(li);
+  }
+  document.getElementById('counter').textContent =
+    `${zereginak.length} zeregin${zereginak.length === 1 ? '' : 'ak'} mostrad${zereginak.length === 1 ? 'a' : 'as'}`;
+}
+
+function botoia(testua, kallbak, klasea = '') {
+  const b = document.createElement('button');
+  b.className = 'btn sm ' + klasea;
+  b.textContent = testua;
+  b.onclick = kallbak;
+  return b;
+}
+
+async function sortu() {
+  const izenburua = val('izenburua').trim();
+  if (!izenburua) { idatzi(3, 'El título no puede estar vacío.', 'Validación', true); return; }
+  try {
+    const berria = await eskaera('POST', '/zereginak', { izenburua, egina: document.getElementById('egina').checked });
+    idatzi(3, berria, eskaera.azkena);
+    document.getElementById('izenburua').value = '';
+    const azken = eskaera.azkena;
+    await zerrendatu();
+    idatzi(3, berria, azken);
+  } catch (e) { huts(3, e); }
+}
+
+async function aldatu(z) {
+  try {
+    const e = await eskaera('PUT', `/zereginak/${z.id}`, { izenburua: z.izenburua, egina: !z.egina });
+    const azken = eskaera.azkena;
+    await zerrendatu();
+    idatzi(3, e, azken);
+  } catch (e) { huts(3, e); }
+}
+
+async function ezabatu(id) {
+  try {
+    await eskaera('DELETE', `/zereginak/${id}`);
+    const azken = eskaera.azkena;
+    await zerrendatu();
+    idatzi(3, `Zeregina #${id} eliminada`, azken);
+  } catch (e) { huts(3, e); }
+}
+</script>
+</body>
+</html>
