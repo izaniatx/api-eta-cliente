@@ -48,7 +48,7 @@ emaitza = cross_val_score(KNeighborsClassifier(n_neighbors=7), X, y, cv=5, scori
 
 @app.get("/score")
 def score():
-    return {"scores": emaitza.mean()}
+    return {"score": emaitza.mean()}
 
 
 modelo = KNeighborsClassifier(n_neighbors=3)
