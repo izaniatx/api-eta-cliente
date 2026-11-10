@@ -4,6 +4,8 @@ app = FastAPI(title="Zereginen APIa")
 
 from fastapi.middleware.cors import CORSMiddleware
 
+## ---------------- KOMANDOA: uvicorn lehen-api:app --host 0.0.0.0 --reload ------------------------------------
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],      # para clase vale; en producción pon dominios concretos
